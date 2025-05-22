@@ -15,8 +15,6 @@ COLOR_MAP = {
     "state": "#cccccc"        # グレー
 }
 
-st.markdown("### 🧪 NLUエンティティ生データ（デバッグ用）")
-st.json(entities)
 
 
 # ハイライト処理（start/endベースで処理）
@@ -42,8 +40,8 @@ def highlight_entities(text, entities):
     return text
 
 # UI構築
-st.title("🩺 ハイリスクワード抽出（WKS + NLU）")
-user_input = st.text_area("患者関連の文章を入力してください：", height=300)
+st.title("🩺 ハイリスク抽出（WKS + NLU）")
+user_input = st.text_area("医療関連の文章を入力してください：", height=300)
 
 if st.button("推論開始"):
     if not user_input.strip():
@@ -65,6 +63,11 @@ if st.button("推論開始"):
                 result = response.json()
                 entities = result.get("entities", [])
                 st.success(f"{len(entities)} 件の注目語を抽出しました。")
+
+st.markdown("### 🧪 NLUエンティティ生データ（デバッグ用）")
+st.json(entities)
+
+
 
                 # ハイライト表示
                 highlighted = highlight_entities(user_input, entities)
