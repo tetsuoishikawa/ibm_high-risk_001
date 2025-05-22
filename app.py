@@ -1,14 +1,14 @@
 import streamlit as st
 import requests
 from requests.auth import HTTPBasicAuth
+import re
 
 # 認証情報をsecretsから読み込み
 API_KEY = st.secrets["nlu_api_key"]
 API_URL = st.secrets["nlu_url"] + "/v1/analyze?version=2021-08-01"
 MODEL_ID = st.secrets["nlu_model_id"]
 
-# 色設定
-# ラベルごとのハイライト色（修正後）
+# ラベルごとのハイライト色
 COLOR_MAP = {
     "high_risk": "background-color: #ff6666;",  # 赤
     "risk": "background-color: #ffcc66;",       # オレンジ
@@ -16,15 +16,20 @@ COLOR_MAP = {
     "state": "background-color: #cccccc;"       # グレー
 }
 
-# ハイライト処理
+# ハイライト処理（text + typeベースでマッチング）
 def highlight_entities(text, entities):
-    # 重複回避のため位置情報付きリストに変換
-    sorted_ents = sorted(entities, key=lambda x: x['start'], reverse=True)
-    for ent in sorted_ents:
-        label = ent['type']
-        color = LABEL_COLORS.get(label, "#dddddd")
-        span = f"<span style='background-color: {color}; padding: 2px; border-radius: 4px;' title='{label}'>{ent['text']}</span>"
-        text = text[:ent['start']] + span + text[ent['end']:]
+    # 重複を除去して長い語句順に並び替え
+    unique_ents = sorted(
+        list({(ent["text"], ent["type"]) for ent in entities}),
+        key=lambda x: -len(x[0])
+    )
+
+    # ハイライト表示用テキスト生成
+    for phrase, label in unique_ents:
+        style = COLOR_MAP.get(label, "background-color: #dddddd;")
+        pattern = re.escape(phrase)
+        span = f"<span style='{style} padding:2px; border-radius:4px;' title='{label}'>{phrase}</span>"
+        text = re.sub(pattern, span, text, flags=re.IGNORECASE)
     return text
 
 # Streamlit UI
@@ -45,6 +50,7 @@ if st.button("推論開始"):
                 }
             }
             response = requests.post(API_URL, json=payload, auth=HTTPBasicAuth("apikey", API_KEY))
+
             if response.status_code == 200:
                 result = response.json()
                 entities = result.get("entities", [])
@@ -52,11 +58,16 @@ if st.button("推論開始"):
 
                 # ハイライト表示
                 highlighted = highlight_entities(user_input, entities)
-                st.markdown(highlighted, unsafe_allow_html=True)
+                st.markdown("### 🖍 抽出ハイライト", unsafe_allow_html=True)
+                st.markdown(f"<div style='line-height:1.8'>{highlighted}</div>", unsafe_allow_html=True)
 
-                # 詳細一覧
-                st.subheader("🔍 抽出された語句一覧")
+                # 詳細一覧表示
+                st.markdown("### 📝 抽出語句一覧")
                 for ent in entities:
-                    st.write(f"【{ent['type']}】{ent['text']}（信頼度: {ent['confidence']:.2f}）")
+                    confidence = ent.get("confidence")
+                    if confidence is not None:
+                        st.write(f"【{ent['type']}】{ent['text']}（信頼度: {confidence:.2f}）")
+                    else:
+                        st.write(f"【{ent['type']}】{ent['text']}")
             else:
-                st.error(f"エラーが発生しました: {response.status_code}")
+                st.error(f"エラーが発生しました（コード: {response.status_code}）")
