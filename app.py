@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from requests.auth import HTTPBasicAuth
+import re
 
 # 認証情報をsecretsから取得
 API_KEY = st.secrets["nlu_api_key"]
@@ -15,33 +16,22 @@ COLOR_MAP = {
     "state": "#cccccc"        # グレー
 }
 
-
-
-# ハイライト処理（start/endベースで処理）
+# ハイライト処理（textベース版）
 def highlight_entities(text, entities):
-    spans = []
-    for ent in entities:
-        if "start" in ent and "end" in ent:
-            spans.append({
-                "start": ent["start"],
-                "end": ent["end"],
-                "text": ent["text"],
-                "type": ent["type"]
-            })
-
-    # 開始位置でソート（逆順）→ 後ろから埋め込む
-    spans = sorted(spans, key=lambda x: x["start"], reverse=True)
-
-    for span in spans:
-        label = span["type"]
+    unique_ents = sorted(
+        list({(ent["text"], ent["type"]) for ent in entities}),
+        key=lambda x: -len(x[0])
+    )
+    for phrase, label in unique_ents:
         color = COLOR_MAP.get(label, "#dddddd")
-        styled = f"<span style='background-color: {color}; padding: 2px; border-radius: 4px;' title='{label}'>{span['text']}</span>"
-        text = text[:span["start"]] + styled + text[span["end"]:]
+        pattern = re.escape(phrase)
+        span = f"<span style='background-color: {color}; padding:2px; border-radius:4px;' title='{label}'>{phrase}</span>"
+        text = re.sub(pattern, span, text, flags=re.IGNORECASE)
     return text
 
 # UI構築
-st.title("🩺 ハイリスク抽出（WKS + NLU）")
-user_input = st.text_area("医療関連の文章を入力してください：", height=300)
+st.title("🩺 ハイリスクワード抽出（WKS + NLU）")
+user_input = st.text_area("患者関連の文章を入力してください：", height=300)
 
 if st.button("推論開始"):
     if not user_input.strip():
@@ -56,7 +46,6 @@ if st.button("推論開始"):
                     }
                 }
             }
-
             response = requests.post(API_URL, json=payload, auth=HTTPBasicAuth("apikey", API_KEY))
 
             if response.status_code == 200:
@@ -64,10 +53,8 @@ if st.button("推論開始"):
                 entities = result.get("entities", [])
                 st.success(f"{len(entities)} 件の注目語を抽出しました。")
 
-st.markdown("### 🧪 NLUエンティティ生データ（デバッグ用）")
-st.json(entities)
-
-
+                # デバッグ用：レスポンス内容を確認
+                # st.json(entities)
 
                 # ハイライト表示
                 highlighted = highlight_entities(user_input, entities)
