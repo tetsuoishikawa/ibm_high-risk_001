@@ -31,7 +31,7 @@ def highlight_entities(text, entities):
 
 # UI構築
 st.title("🩺 ハイリスク抽出（WKS + NLU）")
-user_input = st.text_area("医療関連の文章を入力してください。注目語を推論します。但し、位置は分かりません", height=300)
+user_input = st.text_area("IBM Cloudで注目語を推論します。医療関連の文章を入力してください。但し、位置は分かりません。", height=300)
 
 if st.button("推論開始"):
     if not user_input.strip():
