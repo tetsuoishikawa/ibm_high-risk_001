@@ -10,9 +10,9 @@ MODEL_ID = st.secrets["nlu_model_id"]
 
 # ラベルごとの色（最新版）
 COLOR_MAP = {
-    "high_risk": "#cc66ff",   # 紫
+    "high_risk": "#9370db",   # 紫
     "risk": "#ff6666",        # 赤
-    "hazard": "#99ff99",      # 緑
+    "hazard": "#228b22",      # 緑
     "state": "#cccccc"        # グレー
 }
 
@@ -30,8 +30,8 @@ def highlight_entities(text, entities):
     return text
 
 # UI構築
-st.title("🩺 ハイリスクワード抽出（WKS + NLU）")
-user_input = st.text_area("患者関連の文章を入力してください：", height=300)
+st.title("🩺 ハイリスク抽出（WKS + NLU）")
+user_input = st.text_area("医療関連の文章を入力してください。注目語を推論します。但し、位置は分かりません", height=300)
 
 if st.button("推論開始"):
     if not user_input.strip():
@@ -62,7 +62,7 @@ if st.button("推論開始"):
                 st.markdown(f"<div style='line-height:1.8'>{highlighted}</div>", unsafe_allow_html=True)
 
                 # 抽出語句一覧
-                st.markdown("### 📝 抽出語句一覧")
+                st.markdown("### 📝 抽出語一覧")
                 for ent in entities:
                     conf = ent.get("confidence")
                     if conf is not None:
