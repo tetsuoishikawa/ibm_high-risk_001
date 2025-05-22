@@ -15,6 +15,10 @@ COLOR_MAP = {
     "state": "#cccccc"        # グレー
 }
 
+st.markdown("### 🧪 NLUエンティティ生データ（デバッグ用）")
+st.json(entities)
+
+
 # ハイライト処理（start/endベースで処理）
 def highlight_entities(text, entities):
     spans = []
